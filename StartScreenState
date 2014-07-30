@@ -1,0 +1,165 @@
+/* 
+* Copyright (c) 2014, MCvdBerg
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+* 
+* * Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
+* 
+* * Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
+* 
+* * Neither the name of [project] nor the names of its
+*   contributors may be used to endorse or promote products derived from
+*   this software without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/ 
+
+import com.jme3.app.Application;
+import com.jme3.app.SimpleApplication;
+import com.jme3.app.state.AbstractAppState;
+import com.jme3.app.state.AppStateManager;
+import com.jme3.asset.AssetManager;
+import com.jme3.font.BitmapFont;
+import com.jme3.font.BitmapText;
+import com.jme3.input.FlyByCamera;
+import com.jme3.input.InputManager;
+import com.jme3.renderer.ViewPort;
+import com.jme3.scene.Node;
+import de.lessvoid.nifty.Nifty;
+import de.lessvoid.nifty.controls.TextField;
+import de.lessvoid.nifty.screen.Screen;
+import de.lessvoid.nifty.screen.ScreenController;
+import java.io.IOException;
+import jxl.write.WriteException;
+
+/**
+ * @author: MCvdBerg
+ */
+
+public class StartScreenState extends AbstractAppState
+                              implements ScreenController {
+  
+  private SimpleApplication app;
+  private AppStateManager stateManager;   
+  private AssetManager assetManager;
+  private InputManager inputManager;
+  private Node rootNode;
+  private Node guiNode;
+  private Node localRootNode = new Node("Start Screen RootNode");
+  private Node localGuiNode = new Node("Start Screen GuiNode");
+  private ViewPort viewPort;
+  private Nifty nifty;
+  private Screen screen;
+  private FlyByCamera flyCam;
+  
+public StartScreenState(SimpleApplication app){
+    this.rootNode     = app.getRootNode();
+    this.viewPort     = app.getViewPort();
+    this.guiNode      = app.getGuiNode();
+    this.assetManager = app.getAssetManager();
+  }
+
+
+
+  @Override
+public void initialize(AppStateManager stateManager, Application app) {
+    super.initialize(stateManager, app);
+    this.app=(SimpleApplication) app;
+    this.rootNode     = this.app.getRootNode();
+    this.assetManager = this.app.getAssetManager();
+    this.stateManager = this.app.getStateManager();
+    this.inputManager = this.app.getInputManager();
+    this.viewPort     = this.app.getViewPort();
+    this.flyCam       = this.app.getFlyByCamera();
+  
+    screen.findNiftyControl("filename", TextField.class).setText("ModernHome-"+ getPlayerName());
+  }
+  
+// Custom methods
+public void startGame(){
+    // Turn running on/off        
+    Main.app.getStateManager().getState(RunningScreenState.class).isRunning = 
+            !Main.app.getStateManager().getState(RunningScreenState.class).isRunning;
+
+    // Switch to in-game screen and controls        
+    nifty.gotoScreen("hud");
+    Main.app.getStateManager().getState(StartScreenState.class).setEnabled(false);
+    Main.app.getStateManager().getState(RunningScreenState.class).setEnabled(true);
+
+  }
+
+  public void exportGame() throws IOException, WriteException {
+    // Get the file name
+    String fileName = screen.findNiftyControl("filename", TextField.class).getText();  
+
+    // Export the results to Excel
+    ExportToExcel results = new ExportToExcel();
+    results.initialize(stateManager, app);
+    results.setOutputFile("c:/temp/" + fileName +".xls");
+    results.getInput();
+    results.write();
+    
+    System.out.println("Zie het resultaat in c:/temp/ModernHome-" + getPlayerName() + ".xls");
+
+  }
+
+public void quitGame() throws IOException, WriteException {
+    // Close application (do not export results)
+    if ("".equals(screen.findNiftyControl("filename", TextField.class).getText())) {
+     Main.app.stop(); // Stop the application if no filename is entered
+    } else {
+     exportGame();    // Export the results
+     Main.app.stop(); // Stop the game
+  }
+}
+
+ public String getPlayerName(){
+    return System.getProperty("user.name");
+  }
+
+@Override
+public void update(float tpf) { }
+
+//Nifty GUI ScreenControl methods
+public void bind(Nifty nifty, Screen screen) {
+    this.nifty = nifty;
+    this.screen = screen;
+}
+
+public void onStartScreen() { }
+
+public void onEndScreen() { }
+
+@Override 
+public void cleanup(){
+    super.cleanup();
+}
+
+@Override
+  public void setEnabled(boolean enabled) {
+    super.setEnabled(enabled);
+    if(enabled){
+      // Actions when this state is enabled
+          rootNode.attachChild(localRootNode);
+          guiNode.attachChild(localGuiNode);          
+    } else {
+      // Actions when this state is disabled
+          rootNode.detachChild(localRootNode);
+          guiNode.detachChild(localGuiNode);
+    }
+  }
+}
