@@ -1,0 +1,166 @@
+/* 
+* Copyright (c) 2014, MCvdBerg
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+* 
+* * Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
+* 
+* * Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
+* 
+* * Neither the name of [project] nor the names of its
+*   contributors may be used to endorse or promote products derived from
+*   this software without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/ 
+
+package designreview;
+
+import com.jme3.app.Application;
+import com.jme3.app.state.AppStateManager;
+import java.io.File;
+import java.io.IOException;
+import jxl.CellView;
+import jxl.Workbook;
+import jxl.WorkbookSettings;
+import jxl.format.UnderlineStyle;
+import jxl.write.Label;
+import jxl.write.Number;
+import jxl.write.WritableCellFormat;
+import jxl.write.WritableFont;
+import jxl.write.WritableSheet;
+import jxl.write.WritableWorkbook;
+import jxl.write.WriteException;
+import jxl.write.biff.RowsExceededException;
+
+/**
+ * @author: MCvdBerg
+ */
+
+public class ExportToExcel {
+    private WritableCellFormat arialBoldUnderline;
+    private WritableCellFormat arial;
+    private String inputFile;
+    private String[] objectlist;
+    private String[] namelist;
+    private String[] idlist;
+    private String[] guidlist;
+    private String[] typelist;
+    private String[] commentlist; 
+
+public void initialize(AppStateManager stateManager, Application app) { }
+
+public void setOutputFile(String inputFile) {
+    this.inputFile = inputFile;
+}
+
+public void getInput() {
+    // get the user data of the objects clicked on and values entered in the textfields
+    objectlist = Main.app.getStateManager().getState(RunningScreenState.class).object;
+    namelist = Main.app.getStateManager().getState(RunningScreenState.class).ifcName;
+    idlist = Main.app.getStateManager().getState(RunningScreenState.class).ifcId;
+    guidlist = Main.app.getStateManager().getState(RunningScreenState.class).ifcGuid;
+    typelist = Main.app.getStateManager().getState(RunningScreenState.class).ifcType;
+    commentlist = Main.app.getStateManager().getState(FeedbackScreenState.class).comments;  
+}
+
+public void write() throws IOException, WriteException {   
+    File file = new File(inputFile);
+    WorkbookSettings wbSettings = new WorkbookSettings();
+
+    WritableWorkbook workbook = Workbook.createWorkbook(file, wbSettings);
+    workbook.createSheet("Feedback", 0);
+    WritableSheet excelSheet = workbook.getSheet(0);
+    createLabel(excelSheet);
+    createContent(excelSheet);
+
+    workbook.write();
+    workbook.close();
+}
+
+private void createLabel(WritableSheet sheet)
+    throws WriteException {
+    // Create a font
+    WritableFont arial10pt = new WritableFont(WritableFont.ARIAL, 10);
+    // Define the cell format
+    arial = new WritableCellFormat(arial10pt);
+    // Set automatically wrapping to false
+    arial.setWrap(false);
+
+    // Create a bold font with underlines
+    WritableFont arial10ptBoldUnderline = new WritableFont(WritableFont.ARIAL, 10, WritableFont.BOLD, false,
+        UnderlineStyle.SINGLE);
+    arialBoldUnderline = new WritableCellFormat(arial10ptBoldUnderline);
+    // Set automatically wrapping to false
+    arialBoldUnderline.setWrap(false);
+
+    CellView cv = new CellView();
+    cv.setFormat(arial);
+    cv.setFormat(arialBoldUnderline);
+    cv.setAutosize(true);
+
+    // Write headers
+    addCaption(sheet, 1, 0, "Object");
+    addCaption(sheet, 2, 0, "IFC Name");
+    addCaption(sheet, 3, 0, "IFC Id");
+    addCaption(sheet, 4, 0, "IFC Guid");
+    addCaption(sheet, 5, 0, "IFC Type");
+    addCaption(sheet, 6, 0, "Opmerking");
+}
+
+private void createContent(WritableSheet sheet) throws WriteException,
+    RowsExceededException {
+      for (int i = 1; i < 51; i++) {
+        // First column
+        addNumber(sheet, 0, i, i);
+        // Second column 
+        addLabel(sheet, 1, i, objectlist[i]);
+        // Third column
+        addLabel(sheet, 2, i, namelist[i]);
+        // Fourth column
+        addLabel(sheet, 3, i, idlist[i]);
+        // Fifth column 
+        addLabel(sheet, 4, i, guidlist[i]);
+        // Sixth column
+        addLabel(sheet, 5, i, typelist[i]);
+        // Seventh column
+        addLabel(sheet, 6, i, commentlist[i]);
+        }
+}
+
+private void addCaption(WritableSheet sheet, int column, int row, String s)
+    throws RowsExceededException, WriteException {
+    Label label;
+    label = new Label(column, row, s, arialBoldUnderline);
+    sheet.addCell(label);
+}
+
+private void addNumber(WritableSheet sheet, int column, int row,
+    Integer integer) throws WriteException, RowsExceededException {
+    Number number;
+    number = new Number(column, row, integer, arial);
+    sheet.addCell(number);
+}
+
+private void addLabel(WritableSheet sheet, int column, int row, String s)
+    throws WriteException, RowsExceededException {
+    Label label;
+    label = new Label(column, row, s, arial);
+    sheet.addCell(label);
+} 
+
+} 
