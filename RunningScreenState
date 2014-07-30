@@ -1,0 +1,466 @@
+/* 
+* Copyright (c) 2014, MCvdBerg
+* All rights reserved.
+* 
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+* 
+* * Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
+* 
+* * Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
+* 
+* * Neither the name of [project] nor the names of its
+*   contributors may be used to endorse or promote products derived from
+*   this software without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/ 
+
+package designreview;
+
+import com.jme3.app.Application;
+import com.jme3.app.SimpleApplication;
+import com.jme3.app.state.AbstractAppState;
+import com.jme3.app.state.AppStateManager;
+import com.jme3.app.state.ScreenshotAppState;
+import com.jme3.asset.AssetManager;
+import com.jme3.bullet.BulletAppState;
+import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
+import com.jme3.bullet.collision.shapes.CollisionShape;
+import com.jme3.bullet.control.CharacterControl;
+import com.jme3.bullet.control.RigidBodyControl;
+import com.jme3.bullet.util.CollisionShapeFactory;
+import com.jme3.collision.CollisionResults;
+import com.jme3.font.BitmapFont;
+import com.jme3.font.BitmapText;
+import com.jme3.input.FlyByCamera;
+import com.jme3.input.InputManager;
+import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
+import com.jme3.light.AmbientLight;
+import com.jme3.light.DirectionalLight;
+import com.jme3.material.Material;
+import com.jme3.math.ColorRGBA;
+import com.jme3.math.Ray;
+import com.jme3.math.Vector3f;
+import com.jme3.renderer.Camera;
+import com.jme3.renderer.ViewPort;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
+import com.jme3.scene.shape.Sphere;
+import com.jme3.util.SkyFactory;
+import de.lessvoid.nifty.Nifty;
+import de.lessvoid.nifty.controls.TextField;
+import de.lessvoid.nifty.screen.Screen;
+import de.lessvoid.nifty.screen.ScreenController;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+/**
+ * @author: MCvdBerg
+ */
+
+public class RunningScreenState  extends AbstractAppState
+                                 implements ScreenController, ActionListener {
+    
+    private SimpleApplication app;
+    private AppStateManager stateManager;   
+    private AssetManager assetManager;
+    private InputManager inputManager;
+    private Node rootNode;
+    private Node guiNode;
+    public Node localRootNode = new Node("Running Screen RootNode");
+    private Node localGuiNode = new Node("Running Screen GuiNode");
+    private ViewPort viewPort;
+    private Nifty nifty;
+    private Screen screen;
+    private FlyByCamera flyCam;
+    private Camera cam;
+
+    // Variables below are specific for (IFC) design to be evaluated
+    private Spatial ModernHomeWithoutDoors; 
+    private Spatial ModernHomeDoors;
+    private RigidBodyControl ModernHomeWithoutDoorsBodyControl;
+    private BulletAppState bulletAppState;
+    private CharacterControl physicsCharacter;
+    private Node characterNode;
+
+    // Variables used for walking
+    private Vector3f walkDirection = new Vector3f();
+    private Vector3f camDir = new Vector3f();
+    private Vector3f camLeft = new Vector3f();
+    private boolean left = false, right = false, up = false, down = false, 
+                    bird = false;
+
+    // Variable to identify whether application is in running mode
+    public boolean isRunning = true;
+
+    // Array used for identifying objects clicked
+    public String[] object;
+    public String[] ifcName;
+    public String[] ifcId;
+    public String[] ifcGuid;
+    public String[] ifcType;
+    
+    // Variables for marking the ojbect
+    private Geometry[] mark;
+    private BitmapFont guiFont;
+    public int tempNumber;
+    private int runNumber;
+    public Geometry[] markspot;
+    ArrayList<Vector3f> clicked = new ArrayList<Vector3f>();
+
+    private Spatial STL;
+
+public RunningScreenState(SimpleApplication app){
+    this.rootNode      = app.getRootNode();
+    this.viewPort      = app.getViewPort();
+    this.guiNode       = app.getGuiNode();
+    this.assetManager  = app.getAssetManager();  
+  }
+
+@Override
+public void initialize(AppStateManager stateManager, Application app) {
+    super.initialize(stateManager, app);
+    this.app=(SimpleApplication) app;
+    this.rootNode     = this.app.getRootNode();
+    this.assetManager = this.app.getAssetManager();
+    this.stateManager = this.app.getStateManager();
+    this.inputManager = this.app.getInputManager();
+    this.viewPort     = this.app.getViewPort();
+    this.flyCam       = this.app.getFlyByCamera();
+    this.cam          = this.app.getCamera();
+    
+    
+    // Display text (not using Nifty)
+    BitmapFont guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
+    BitmapText displaytext = new BitmapText(guiFont);
+    displaytext.setSize(guiFont.getCharSet().getRenderedSize());
+    displaytext.move(10, displaytext.getLineHeight() + 20,  0);
+    displaytext.setText("Main menu: [ESCAPE]");
+    localGuiNode.attachChild(displaytext);  
+   
+    // Add sky (only works if the test-data library is loaded) 
+    localRootNode.attachChild(SkyFactory.createSky(
+           assetManager, "Textures/Sky/Bright/BrightSky.dds", false)); 
+    
+    viewPort.setBackgroundColor(ColorRGBA.LightGray);
+  
+    // Activate physics
+    bulletAppState = new BulletAppState();
+    stateManager.attach(bulletAppState);
+          
+    // Load model without doors
+    ModernHomeWithoutDoors = assetManager.loadModel("Models/ModernHomeWithoutDoors.j3o");
+    ModernHomeWithoutDoors.setLocalScale(10f);
+    ModernHomeWithoutDoors.setLocalTranslation(0f,0f,0f);
+
+    CollisionShape modernHomeWithoutDoorsShape = 
+            CollisionShapeFactory.createMeshShape((Node) ModernHomeWithoutDoors);
+    ModernHomeWithoutDoorsBodyControl = new RigidBodyControl(modernHomeWithoutDoorsShape, 0);
+    ModernHomeWithoutDoors.addControl(ModernHomeWithoutDoorsBodyControl);
+    bulletAppState.getPhysicsSpace().add(ModernHomeWithoutDoorsBodyControl);  
+
+    // Load model doors
+    ModernHomeDoors = assetManager.loadModel("Models/ModernHomeDoors.j3o");
+    ModernHomeDoors.setLocalScale(10f);
+    ModernHomeDoors.setLocalTranslation(0f,0f,0f);
+
+    // Load a character 
+    physicsCharacter = new CharacterControl(new CapsuleCollisionShape(2f, 17f), 1f);
+    physicsCharacter.setPhysicsLocation(new Vector3f(0, 1, 0));
+    physicsCharacter.setJumpSpeed(15f);
+    physicsCharacter.setFallSpeed(15f);
+    physicsCharacter.setMaxSlope(3.5f);
+  
+    characterNode = new Node("character node");
+    characterNode.setLocalTranslation(80,-5f,100f);
+    characterNode.addControl(physicsCharacter);
+    getPhysicsSpace().add(physicsCharacter);
+           
+    // Initiate light, keys, crosshairs
+    setUpLight();
+    setUpKeys();
+    setUpCrossHairs();
+            
+    // Arrays to record what is clicked
+    object = new String[101];
+    ifcName = new String[101];
+    ifcId = new String[101]; 
+    ifcGuid = new String[101];
+    ifcType = new String[101];
+    mark = new Geometry[101];
+    markspot = new Geometry[101];
+
+    // Attach all spatials to the local rootNode
+    localRootNode.attachChild(ModernHomeWithoutDoors);
+    localRootNode.attachChild(ModernHomeDoors);
+    localRootNode.attachChild(characterNode);
+   
+    ScreenshotAppState screenShotState = new ScreenshotAppState();
+    stateManager.attach(screenShotState);
+    
+    }
+  
+    
+private ActionListener actionListener = new ActionListener() {
+    public void onAction(String name, boolean buttonPressed, float tpf) {
+            if (name.equals("Pick target") && !buttonPressed && !isRunning) {
+                // Reset results list
+                CollisionResults results = new CollisionResults();
+                // Aim the ray from cam loc to cam direction
+                Ray ray = new Ray(cam.getLocation(), cam.getDirection());
+                // Collect intersections between ray and objects in results list
+                localRootNode.collideWith(ray, results);
+                // Get the closest object
+                if (results.size() > 0) {        
+                    // The closest result is the target that the user picked
+                    Geometry target = results.getClosestCollision().getGeometry();
+                    
+                    runNumber = Main.app.getStateManager().getState(FeedbackScreenState.class).number;
+                    // Store the target's properties in the objects array
+                    object[runNumber] = target.getName(); 
+                    ifcName[runNumber] = target.getParent().getUserData("ifc_name");
+                    ifcId[runNumber] = String.valueOf(target.getParent().getUserData("ifc_id")); // id is of type Int
+                    ifcGuid[runNumber] = target.getParent().getUserData("ifc_guid");
+                    ifcType[runNumber] = target.getParent().getUserData("ifc_type");
+
+                    
+                    // Mark the object
+                    clicked.add(results.getClosestCollision().getContactPoint());
+                    Sphere sphere = new Sphere(30, 30, 2f);
+                    mark[runNumber] = new Geometry("spot", sphere);
+                    Material mark_mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+                    mark_mat.setColor("Color", ColorRGBA.Red);
+                    mark[runNumber].setMaterial(mark_mat);                    
+                    markspot[runNumber] = mark[runNumber];
+                    markspot[runNumber].setLocalTranslation(results.getClosestCollision().getContactPoint());
+                    localRootNode.attachChild(mark[runNumber]);
+                    
+                    // Take a screenshot
+                    Main.app.getStateManager().getState(ScreenshotAppState.class).takeScreenshot();
+
+                    // Turn running on/off
+                    isRunning = !isRunning;
+
+                    // Go to the Feedback Screen
+                    nifty.gotoScreen("feedback");
+                    Main.app.getStateManager().getState(RunningScreenState.class).setEnabled(false);
+                    Main.app.getStateManager().getState(FeedbackScreenState.class).setEnabled(true);
+                    flyCam.setDragToRotate(true); 
+                    
+                    }
+            } else if (name.equals("Change target") && !buttonPressed && !isRunning) {
+                    // Reset results list
+                    CollisionResults results2 = new CollisionResults();
+                    // Aim the ray from cam loc to cam direction
+                    Ray ray2 = new Ray(cam.getLocation(), cam.getDirection());
+                    // Collect intersections between ray and objects in results list
+                    localRootNode.collideWith(ray2, results2);
+                    // Get the target
+                    Geometry target2 = results2.getClosestCollision().getGeometry();
+                    // Check if the target is a marked 
+                    if (results2.size() > 0 && Arrays.asList(markspot).contains(target2)) {                      
+                        // Get the index of the object aimed at
+                        int index = Arrays.asList(mark).indexOf(results2.getClosestCollision().getGeometry());
+                        // Get the comment that was entered
+                        String commentEntered = Main.app.getStateManager().getState(FeedbackScreenState.class).comments[index];
+                        // A help variable that is necessary to change comments previously made
+                        tempNumber = Main.app.getStateManager().getState(FeedbackScreenState.class).number;
+                        // Tell the feedback screen the index number 
+                        Main.app.getStateManager().getState(FeedbackScreenState.class).number = index;
+                                               
+                        // Turn running on/off
+                        isRunning = !isRunning;
+                        
+                        // Go to the Feedback Screen
+                        flyCam.setDragToRotate(true);  
+                        nifty.gotoScreen("feedback");
+                        Main.app.getStateManager().getState(RunningScreenState.class).setEnabled(false);
+                        Main.app.getStateManager().getState(FeedbackScreenState.class).setEnabled(true);
+                        Main.app.getStateManager().getState(FeedbackScreenState.class).screen.findNiftyControl("input", TextField.class).setText(commentEntered);  
+                    }
+                 } else if (name.equals("Switch view") && !buttonPressed && !isRunning){ 
+                     if (bird==false) {   
+                         // Switch to bird mode
+                         bird = !bird;
+                       
+                     } else {
+                         // Switch to first-person mode 
+                         characterNode.setLocalTranslation(cam.getLocation());
+                         characterNode.addControl(physicsCharacter);
+                         getPhysicsSpace().add(physicsCharacter);
+                         bird = !bird;    
+                     
+                     }
+                     
+                 }
+            }
+        };
+    
+  
+
+// Adding light makes the scene visible
+private void setUpLight() {
+    // We add light so we see the scene
+    AmbientLight al = new AmbientLight();
+    al.setColor(ColorRGBA.White.mult(2.0f));
+    localRootNode.addLight(al);
+
+    // A white, directional light source 
+    DirectionalLight sun = new DirectionalLight();
+    sun.setDirection((new Vector3f(-0.5f, -0.5f, -0.5f)).normalizeLocal());
+    sun.setColor(ColorRGBA.White);
+    localRootNode.addLight(sun); 
+    
+    // A white, directional light source 
+    DirectionalLight sun2 = new DirectionalLight();
+    sun2.setDirection((new Vector3f(0.5f, 0.5f, 0.5f)).normalizeLocal());
+    sun2.setColor(ColorRGBA.White);
+    localRootNode.addLight(sun2); 
+    
+    
+}
+
+// Register name-trigger pairs as mapping to the inputManager object 
+private void setUpKeys() {   
+    inputManager.deleteTrigger("FLYCAM_Left", new KeyTrigger(KeyInput.KEY_LEFT));
+    inputManager.deleteTrigger("FLYCAM_Right", new KeyTrigger(KeyInput.KEY_RIGHT));
+    inputManager.deleteTrigger("FLYCAM_Up", new KeyTrigger(KeyInput.KEY_UP));
+    inputManager.deleteTrigger("FLYCAM_Down", new KeyTrigger(KeyInput.KEY_DOWN));
+
+    inputManager.addMapping("Left",  new KeyTrigger(KeyInput.KEY_A),
+                                     new KeyTrigger(KeyInput.KEY_LEFT));
+    inputManager.addMapping("Right", new KeyTrigger(KeyInput.KEY_D),
+                                     new KeyTrigger(KeyInput.KEY_RIGHT));
+    inputManager.addMapping("Up",    new KeyTrigger(KeyInput.KEY_W),
+                                     new KeyTrigger(KeyInput.KEY_UP));
+    inputManager.addMapping("Down",  new KeyTrigger(KeyInput.KEY_S),
+                                     new KeyTrigger(KeyInput.KEY_DOWN));
+    inputManager.addMapping("Jump",  new KeyTrigger(KeyInput.KEY_SPACE));
+    inputManager.addMapping("Pick target", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
+    inputManager.addMapping("Change target", new KeyTrigger(KeyInput.KEY_LSHIFT));
+    inputManager.addMapping("Switch view", new KeyTrigger(KeyInput.KEY_TAB));
+    
+    inputManager.addListener(this, "Left");
+    inputManager.addListener(this, "Right");
+    inputManager.addListener(this, "Up");
+    inputManager.addListener(this, "Down");
+    inputManager.addListener(this, "Jump");
+    inputManager.addListener(actionListener, "Pick target");
+    inputManager.addListener(actionListener, "Change target");
+    inputManager.addListener(actionListener, "Switch view");
+
+    
+}
+
+// A plus sign used as crosshairs to help user aiming
+public void setUpCrossHairs() {
+    guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
+    BitmapText crosshairs = new BitmapText(guiFont, false);
+    crosshairs.setSize(guiFont.getCharSet().getRenderedSize() * 2);
+    crosshairs.setText("+");        // fake crosshairs
+    crosshairs.setLocalTranslation(
+        Main.app.getContext().getSettings().getWidth() / 2 - guiFont.getCharSet().getRenderedSize() / 3 * 2,
+        Main.app.getContext().getSettings().getHeight() / 2 + crosshairs.getLineHeight() / 2, 0);
+    localGuiNode.attachChild(crosshairs);
+}
+
+// Keep track of custom actions user performs
+@Override
+public void onAction(String binding, boolean isPressed, float tpf) {
+    if (binding.equals("Left")) {
+      left = isPressed;
+    } else if (binding.equals("Right")) {
+      right= isPressed;
+    } else if (binding.equals("Up")) {
+      up = isPressed;
+    } else if (binding.equals("Down")) {
+      down = isPressed;
+    } else if (binding.equals("Jump")) {
+      if (isPressed) { physicsCharacter.jump(); 
+      System.out.print("Current location is:" + characterNode.getLocalTranslation());}
+    }
+}
+   
+@Override
+public void update(float tpf) {
+    if (bird == false) {
+
+    // Perform walking by interpreting camera direction forward and to left  
+    camDir.set(cam.getDirection()).multLocal(0.5f);  
+    camLeft.set(cam.getLeft()).multLocal(0.5f);
+    walkDirection.set(0, 0, 0);
+        if (left) {
+            walkDirection.addLocal(camLeft);
+        }
+        if (right) {
+            walkDirection.addLocal(camLeft.negate());
+        }
+        if (up) {
+            walkDirection.addLocal(camDir);
+        }
+        if (down) {
+            walkDirection.addLocal(camDir.negate());
+        }
+    physicsCharacter.setWalkDirection(walkDirection);
+    cam.setLocation(physicsCharacter.getPhysicsLocation().add(0f,5f,0f)); 
+    }
+    
+}
+
+private PhysicsSpace getPhysicsSpace() {
+    return bulletAppState.getPhysicsSpace();
+}
+  
+//Nifty GUI ScreenControl methods
+@Override
+public void bind(Nifty nifty, Screen screen) {
+this.nifty = nifty;
+this.screen = screen;
+}
+
+@Override
+public void onStartScreen() { }
+
+@Override
+public void onEndScreen() { }
+
+@Override 
+public void cleanup(){
+    super.cleanup();
+}
+    
+@Override
+public void setEnabled(boolean enabled) {
+    super.setEnabled(enabled);
+      if(enabled){
+            // Actions when this state is enabled
+            rootNode.attachChild(localRootNode);
+            guiNode.attachChild(localGuiNode);
+            flyCam.setDragToRotate(false); 
+      }
+      else {
+            // Actions when this state is disabled (hud-screen visible)               
+            guiNode.detachChild(localGuiNode);    
+      }      
+}
+    
+}
