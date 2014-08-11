@@ -28,6 +28,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 
+package designreview;
+
 import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.AbstractAppState;
@@ -45,8 +47,6 @@ import de.lessvoid.nifty.screen.Screen;
 import de.lessvoid.nifty.screen.ScreenController;
 import java.io.IOException;
 import jxl.write.WriteException;
-
-package designreview;
 
 public class StartScreenState extends AbstractAppState
                               implements ScreenController {
