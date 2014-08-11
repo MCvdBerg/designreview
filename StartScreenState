@@ -46,9 +46,7 @@ import de.lessvoid.nifty.screen.ScreenController;
 import java.io.IOException;
 import jxl.write.WriteException;
 
-/**
- * @author: MCvdBerg
- */
+package designreview;
 
 public class StartScreenState extends AbstractAppState
                               implements ScreenController {
