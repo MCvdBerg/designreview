@@ -73,8 +73,6 @@ import de.lessvoid.nifty.screen.ScreenController;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-package designreview;
-
 public class RunningScreenState  extends AbstractAppState
                                  implements ScreenController, ActionListener {
     
