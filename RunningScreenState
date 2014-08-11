@@ -73,9 +73,7 @@ import de.lessvoid.nifty.screen.ScreenController;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-/**
- * @author: MCvdBerg
- */
+package designreview;
 
 public class RunningScreenState  extends AbstractAppState
                                  implements ScreenController, ActionListener {
@@ -126,8 +124,6 @@ public class RunningScreenState  extends AbstractAppState
     private int runNumber;
     public Geometry[] markspot;
     ArrayList<Vector3f> clicked = new ArrayList<Vector3f>();
-
-    private Spatial STL;
 
 public RunningScreenState(SimpleApplication app){
     this.rootNode      = app.getRootNode();
